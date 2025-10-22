@@ -1,0 +1,20 @@
+# ignore large or generated files
+data/
+__pycache__/
+*.pkl
+*.parquet
+*.index
+*.npy
+*.log
+*.csv
+
+# virtual envs
+.venv/
+.env/
+*.egg-info/
+*.conda
+*.pyc
+
+# system files
+.DS_Store
+Thumbs.db
