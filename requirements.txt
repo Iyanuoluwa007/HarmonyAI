@@ -8,4 +8,5 @@ joblib==1.4.2
 sentence-transformers==3.0.1
 transformers==4.45.2
 huggingface-hub==0.25.2
-faiss-cpu==1.8.0.post1
+faiss-cpu>=1.9.0,<=1.12.0
+
