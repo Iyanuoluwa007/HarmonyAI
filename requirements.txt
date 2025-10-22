@@ -1,0 +1,11 @@
+streamlit==1.50.0
+pandas==2.3.3
+numpy==2.3.4
+scikit-learn==1.5.2
+pyarrow==21.0.0
+fastparquet==2024.5.0
+joblib==1.4.2
+sentence-transformers==3.0.1
+transformers==4.45.2
+huggingface-hub==0.25.2
+faiss-cpu==1.8.0.post1
