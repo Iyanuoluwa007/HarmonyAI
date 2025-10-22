@@ -1,10 +1,17 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import faiss
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from sklearn.preprocessing import normalize
+
+# Try FAISS, fall back to NumPy
+try:
+    import faiss  # type: ignore
+    FAISS_OK = True
+except Exception:
+    faiss = None
+    FAISS_OK = False
 
 # ---------- Page setup ----------
 st.set_page_config(page_title="HarmonyAI — Hybrid Recommender", page_icon="🎵", layout="wide")
@@ -32,33 +39,59 @@ class HybridQueryEncoder:
         q = np.hstack([q_text, tail])                                               # (1, hybrid_dim)
         return normalize(q).astype("float32")
 
-# ---------- Load artifacts (items + FAISS) and rebuild encoder ----------
+# ---------- Load artifacts (items + backend) ----------
 @st.cache_resource
 def load_artifacts():
-    req = ["items_50k.pkl", "faiss_ip_50k.index"]
-    missing = [r for r in req if not (ART_DIR / r).exists()]
-    if missing:
-        st.error(f"Looked in: {ART_DIR.resolve()}")
-        raise FileNotFoundError(f"Missing artifacts in {ART_DIR}: {missing}")
+    # Items table
+    items_path = ART_DIR / "items_50k.pkl"
+    if not items_path.exists():
+        st.error(f"Missing: {items_path}")
+        raise FileNotFoundError(items_path)
+    items = pd.read_pickle(items_path)
 
-    items = pd.read_pickle(ART_DIR / "items_50k.pkl")
-    index = faiss.read_index(str(ART_DIR / "faiss_ip_50k.index"))
-
-    hybrid_dim = int(index.d)
+    # Text model dim (MiniLM-L6 is 384)
     text_model = "sentence-transformers/all-MiniLM-L6-v2"
     text_dim = SentenceTransformer(text_model).get_sentence_embedding_dimension()
-    tail_dim = max(0, hybrid_dim - text_dim)  # because we SUMMED lyrics+meta
+
+    # Prefer FAISS (ANN) if available and index exists
+    faiss_path = ART_DIR / "faiss_ip_50k.index"
+    if FAISS_OK and faiss_path.exists():
+        index = faiss.read_index(str(faiss_path))
+        hybrid_dim = int(index.d)
+        tail_dim = max(0, hybrid_dim - text_dim)   # we SUMMED lyrics+meta
+        backend = ("faiss", index)
+    else:
+        # NumPy fallback requires the full matrix
+        emb_path = ART_DIR / "hybrid_emb_50k.npy"
+        if not emb_path.exists():
+            msg = (
+                "FAISS unavailable and fallback matrix missing.\n"
+                f"Expected: {emb_path}\n"
+                "Commit this file or enable FAISS."
+            )
+            st.error(msg)
+            raise FileNotFoundError(msg)
+        mat = np.load(emb_path).astype("float32")
+        # Ensure rows are L2-normalized so dot == cosine
+        mat = normalize(mat).astype("float32")
+        hybrid_dim = mat.shape[1]
+        tail_dim = max(0, hybrid_dim - text_dim)
+        backend = ("numpy", mat)
 
     enc = HybridQueryEncoder(text_model, w_lyrics=0.6, w_meta=0.2, tail_dim=tail_dim)
-    return items, index, enc
+    return items, enc, backend, hybrid_dim, text_dim, tail_dim
 
-items, index, enc = load_artifacts()
+items, enc, backend, hybrid_dim, text_dim, tail_dim = load_artifacts()
 
-# ---------- Centered title (no extra caption/dims) ----------
+# ---------- Centered title ----------
 st.markdown(
     "<h1 style='text-align:center; margin-top: 0;'>🎵 HarmonyAI — Hybrid Music Recommender</h1>",
     unsafe_allow_html=True,
 )
+
+# Show which backend is active
+mode_label = "FAISS (cosine, ANN)" if (backend[0] == "faiss") else "NumPy fallback (cosine, exact)"
+st.caption(f"Search backend: **{mode_label}**")
 
 # ---------- Sidebar preview (silent if no 'popularity') ----------
 with st.sidebar:
@@ -70,7 +103,6 @@ with st.sidebar:
             use_container_width=True,
             hide_index=True,
         )
-    # else: show nothing (no message)
 
 # ---------- Sample titles expander (helps users discover content) ----------
 if len(items):
@@ -101,11 +133,21 @@ def render_results(df: pd.DataFrame):
     )
 
 def rec_by_text(q: str, k: int = 10) -> pd.DataFrame:
-    qv = enc.encode(q)                    # (1, hybrid_dim)
-    scores, ids = index.search(qv, k)     # (1, k)
-    out = items.iloc[ids[0]].copy()
-    out["score"] = scores[0]
-    return out
+    qv = enc.encode(q)  # (1, D)
+    mode_name, obj = backend
+    if mode_name == "faiss":
+        scores, ids = obj.search(qv, k)      # dot product on normalized vectors == cosine
+        out = items.iloc[ids[0]].copy()
+        out["score"] = scores[0]
+        return out
+    else:
+        # NumPy cosine via dot product (both qv and mat are normalized)
+        mat = obj                             # (N, D)
+        scores = (mat @ qv[0])                # (N,)
+        idx = np.argsort(-scores)[:k]
+        out = items.iloc[idx].copy()
+        out["score"] = scores[idx]
+        return out
 
 # ---------- Modes ----------
 if mode == "Free-text mood/lyrics":
@@ -128,6 +170,7 @@ else:
     if matched.empty and title.strip():
         st.info("No matches yet — try fewer words or a different part of the title.")
 
+    # "Title — Artist" for clarity
     options = [""] + (matched["track_name"] + " — " + matched["artist"]).tolist()
     pick = st.selectbox("Pick a seed song", options=options)
 
@@ -136,15 +179,15 @@ else:
             sel_title, sel_artist = pick.split(" — ", 1)
             row_idx = matched[(matched["track_name"] == sel_title) & (matched["artist"] == sel_artist)].index[0]
 
+            # Text-only approximation for seed (keeps app lightweight)
             seed_query = f"{items.loc[row_idx, 'track_name']} {items.loc[row_idx, 'artist']}"
-            qv = enc.encode(seed_query)
-            scores, ids = index.search(qv, k + 1)
+            recs = rec_by_text(seed_query, k + 1)
 
-            filtered = [i for i in ids[0] if i != row_idx][:k]
-            recs = items.iloc[filtered].copy()
-
-            rank = {i: r for r, i in enumerate(ids[0])}
-            recs["score"] = [scores[0][rank[i]] for i in filtered]
+            # remove potential self-hit if present and trim to k
+            # (when using FAISS it may match the same song)
+            mask = ~((recs["track_name"] == items.loc[row_idx, "track_name"]) &
+                     (recs["artist"] == items.loc[row_idx, "artist"]))
+            recs = recs[mask].head(k)
             render_results(recs)
         except Exception as e:
             st.error(f"Seed search error: {e}")
