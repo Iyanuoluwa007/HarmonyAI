@@ -1,8 +1,18 @@
-# 🎵 HarmonyAI — Hybrid Music Recommender
+# 🎵 HarmonyAI: Hybrid Music Recommender
 
 **HarmonyAI** is an intelligent music recommendation system that combines **lyrical meaning**, **audio-style metadata**, and **emotional context** to suggest songs that match your mood or find similar tracks.
 
 It blends modern **Natural Language Understanding (NLP)** with traditional music features to create a hybrid recommendation engine that feels personal and context-aware.
+
+---
+
+## ☁️ Live Demo
+
+Try **HarmonyAI** instantly in your browser: 
+
+🌐 [https://harmonyai-baesxhrdrhaedxwuzxpjd3.streamlit.app/](https://harmonyai-baesxhrdrhaedxwuzxpjd3.streamlit.app/)
+
+No installation required just open the link, describe your mood or select a song, and HarmonyAI will recommend tracks that match your vibe. 🎧
 
 ---
 
