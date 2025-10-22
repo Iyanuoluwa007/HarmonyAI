@@ -130,6 +130,5 @@ All dependencies are listed in requirements.txt.
 ## 👨‍💻 Author
 
 **Iyanuoluwa Enoch Oke**  
-📍 Manchester, UK  
 🔗 GitHub: [Iyanuoluwa007](https://github.com/Iyanuoluwa007)  
 🔗 LinkedIn: [Iyanuoluwa Enoch Oke](https://www.linkedin.com/in/iyanuoluwa-enoch-oke/)
