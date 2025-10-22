@@ -1,20 +1,12 @@
-# ignore large or generated files
 data/
 __pycache__/
-*.pkl
 *.parquet
-*.index
 *.npy
+*.json
 *.log
-*.csv
 
-# virtual envs
-.venv/
-.env/
-*.egg-info/
-*.conda
-*.pyc
+# (keep your existing ignores)
+*.npy
 
-# system files
-.DS_Store
-Thumbs.db
+# allow this specific artifact
+!app/artifacts/hybrid_emb_50k.npy
