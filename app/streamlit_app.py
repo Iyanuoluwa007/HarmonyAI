@@ -116,21 +116,34 @@ mode = st.radio("Search mode", ["Free-text mood/lyrics", "Similar to a song (by 
 k = st.slider("Number of recommendations", 5, 30, 10)
 
 # ---------- Helpers ----------
+def make_spotify_md(track: str, artist: str) -> str:
+    q = f"{track} {artist}".strip()
+    url = f"https://www.google.com/search?q={q.replace(' ', '+')}+site%3Aopen.spotify.com"
+    return f"[🔎 Spotify search]({url})"
+
 def render_results(df: pd.DataFrame):
+    """Markdown card-style renderer so links are clickable."""
+    if df.empty:
+        st.warning("No results found.")
+        return
     df = df.copy().reset_index(drop=True)
+    for _, r in df.iterrows():
+        title = r.get("track_name", "?")
+        artist = r.get("artist", "?")
+        album = r.get("album", "?")
+        genre = r.get("genre", "")
+        score = r.get("score", 0.0)
+        link_md = make_spotify_md(title, artist)
 
-    def mk_link(row):
-        q = f"{row.get('track_name','')} {row.get('artist','')}".strip()
-        url = f"https://www.google.com/search?q={q.replace(' ', '+')}+site%3Aopen.spotify.com"
-        return f"[🔎 Spotify search]({url})"
-
-    df["link"] = df.apply(mk_link, axis=1)
-    cols = [c for c in ["track_name", "artist", "album", "genre", "score", "link"] if c in df.columns]
-    st.dataframe(
-        df[cols].style.format({"score": "{:.3f}"}),
-        use_container_width=True,
-        hide_index=True,
-    )
+        st.markdown(
+            f"""
+**🎵 {title}** — *{artist}*  
+Album: {album} | Genre: {genre} | Score: {score:.3f}  
+{link_md}
+---
+""".strip(),
+            unsafe_allow_html=True,
+        )
 
 def rec_by_text(q: str, k: int = 10) -> pd.DataFrame:
     qv = enc.encode(q)  # (1, D)
@@ -184,7 +197,6 @@ else:
             recs = rec_by_text(seed_query, k + 1)
 
             # remove potential self-hit if present and trim to k
-            # (when using FAISS it may match the same song)
             mask = ~((recs["track_name"] == items.loc[row_idx, "track_name"]) &
                      (recs["artist"] == items.loc[row_idx, "artist"]))
             recs = recs[mask].head(k)
