@@ -101,11 +101,23 @@ with st.sidebar:
         )
 
 # ---------- Sample titles ----------
-if len(items):
-    samples = items.sample(min(10, len(items)), random_state=42)[["track_name", "artist"]]
-    with st.expander("Need ideas? Try some titles from your dataset"):
-        st.markdown("\n".join(f"- {t} — {a}" for t, a in zip(samples["track_name"], samples["artist"])))
+import random
 
+if len(items):
+    # Random shuffle each time the app runs
+    n_samples = min(10, len(items))
+    samples = items.sample(n_samples, random_state=random.randint(0, 999999))[
+        ["track_name", "artist"]
+    ]
+
+    with st.expander("💡 Need ideas? Try some titles from your dataset"):
+        st.markdown(
+            "\n".join(
+                f"- {t} — {a}"
+                for t, a in zip(samples["track_name"], samples["artist"])
+            )
+        )
+        
 # ---------- Controls ----------
 mode = st.radio("Search mode", ["Free-text mood/lyrics", "Similar to a song (by title)"], horizontal=True)
 k = st.slider("Number of recommendations", 5, 30, 10)
