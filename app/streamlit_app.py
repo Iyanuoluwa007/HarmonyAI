@@ -68,10 +68,20 @@ def load_artifacts():
 
 items, enc, backend, hybrid_dim, text_dim, tail_dim = load_artifacts()
 
-# ---------- Centered title ----------
+# ---------- Gradient Title ----------
 st.markdown(
     """
-    <h2 style='text-align:center; margin-top: 0; color:#222;'>🎵 HarmonyAI — Hybrid Music Recommender</h2>
+    <h2 style='
+        text-align:center;
+        margin-top: 0;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        background: linear-gradient(90deg, #1DB954, #00C3FF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    '>
+        🎵 HarmonyAI — Hybrid Music Recommender
+    </h2>
     """,
     unsafe_allow_html=True,
 )
@@ -104,20 +114,34 @@ k = st.slider("Number of recommendations", 5, 30, 10)
 def make_spotify_md(track: str, artist: str) -> str:
     q = f"{track} {artist}".strip()
     url = f"https://www.google.com/search?q={q.replace(' ', '+')}+site%3Aopen.spotify.com"
-    return f"[🔎 Spotify search]({url})"
+    return f"[🔗 Open on Spotify]({url})"
 
 def render_results(df: pd.DataFrame):
     if df.empty:
         st.warning("No results found.")
         return
     for _, r in df.iterrows():
+        title = r.get("track_name", "?")
+        artist = r.get("artist", "?")
+        album = r.get("album", "?")
+        genre = r.get("genre", "")
+        score = r.get("score", 0.0)
+        link = make_spotify_md(title, artist)
         st.markdown(
             f"""
-            <div style='font-size:0.9rem; line-height:1.4; margin-bottom:0.7em;'>
-                <strong>🎵 {r.get('track_name','?')}</strong> — <em>{r.get('artist','?')}</em><br>
-                <span style='opacity:0.85;'>Album:</span> {r.get('album','?')} | <span style='opacity:0.85;'>Genre:</span> {r.get('genre','')} | 
-                <span style='opacity:0.85;'>Score:</span> {r.get('score',0):.3f}<br>
-                <a href="https://www.google.com/search?q={r.get('track_name','').replace(' ', '+')}+{r.get('artist','').replace(' ', '+')}+site%3Aopen.spotify.com" target="_blank" style="color:#1DB954;">🔗 Open on Spotify</a>
+            <div style='
+                font-size:0.9rem;
+                line-height:1.4;
+                margin-bottom:0.7em;
+            '>
+                <strong style="color:#1DB954;">🎵 {title}</strong> — <em>{artist}</em><br>
+                <span style='opacity:0.85;'>Album:</span> {album} |
+                <span style='opacity:0.85;'>Genre:</span> {genre} |
+                <span style='opacity:0.85;'>Score:</span> {score:.3f}<br>
+                <a href="https://www.google.com/search?q={title.replace(' ', '+')}+{artist.replace(' ', '+')}+site%3Aopen.spotify.com"
+                   target="_blank" style="color:#1DB954; text-decoration:none; font-weight:500;">
+                   🔗 Open on Spotify
+                </a>
             </div>
             <hr style='opacity:0.2; margin:0.5em 0;'>
             """,
