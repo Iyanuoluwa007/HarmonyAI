@@ -142,3 +142,23 @@ All dependencies are listed in requirements.txt.
 **Iyanuoluwa Enoch Oke**  
 🔗 GitHub: [Iyanuoluwa007](https://github.com/Iyanuoluwa007)  
 🔗 LinkedIn: [Iyanuoluwa Enoch Oke](https://www.linkedin.com/in/iyanuoluwa-enoch-oke/)
+
+## Licence and attribution
+
+Released under the MIT Licence. See [LICENSE](LICENSE).
+
+Copyright (c) 2026 Oke Iyanuoluwa Enoch.
+
+You are free to use, modify and build on this work. The licence asks one thing
+in return, and it is not optional: keep the copyright notice and the licence
+text with any copy or substantial portion of the software. That notice is how
+the work stays credited to its author.
+
+If you fork this, publish something derived from it, or use it in a product,
+paper or demo, please credit it visibly and link back:
+
+> Built on [HarmonyAI](https://github.com/Iyanuoluwa007/HarmonyAI) by Oke Iyanuoluwa Enoch.
+
+The MIT Licence covers this repository own code only. Any third-party data,
+pretrained weights, papers or assets that may be present remain the property of
+their owners and are subject to their own terms.
